@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Jul 27 16:07:52 2025
-
-@author: teehuien
-"""
-
 import copernicusmarine
 import numpy as np
 
@@ -18,7 +10,7 @@ ds = copernicusmarine.open_dataset(
     minimum_latitude=-3.35,
     maximum_latitude=25.69,
     start_datetime="2016-01-01T00:00:00",
-    end_datetime="2024-11-19T00:00:00",
+    end_datetime="2023-12-31T00:00:00",
 )
 
 print("Original dataset info:")
@@ -56,7 +48,7 @@ if 'err_sla' in ds.data_vars:
         print(f"New shape: {resample_request['err_sla'].shape}")
 
         # === Save to .nc file ===
-        output_nc_file = "ssha_err_sla_resampled_025deg_20160101_20241119.nc"
+        output_nc_file = "ssha_err_sla_resampled_025deg_20160101_20231231.nc"
         resample_request.to_netcdf(output_nc_file)
         print(f"\nSaved resampled data to: {output_nc_file}")
 
