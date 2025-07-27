@@ -11,10 +11,10 @@ import tempfile
 # === CONFIGURATION ===
 BASE_URL = "https://data.remss.com/ccmp/v03.1"
 DEST_DIR = "ccmp_data"
-MERGED_OUT = "ccmp_merged_20160101_20241119_scs.nc"
+MERGED_OUT = "ccmp_merged_20160101_20231231_scs.nc"
 
 START_DATE = datetime.date(2016, 1, 1)
-END_DATE = datetime.date(2024, 11, 19)
+END_DATE = datetime.date(2023, 12, 31)
 
 # Subsetting bounds for South China Sea
 LAT_MIN = -3.35
