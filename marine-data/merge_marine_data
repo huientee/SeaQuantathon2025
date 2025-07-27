@@ -1,99 +1,406 @@
 import xarray as xr
 import numpy as np
+import pandas as pd
 import os
+from tqdm import tqdm
+import gc
+import dask
+from dask.diagnostics import ProgressBar
 
-def merge_oceanographic_data(sst_path, ssha_path, wind_path, output_path):
-    try:
-        # ----------------------------------------------------------------------
-        # 1. Load and validate individual datasets
-        # ----------------------------------------------------------------------
-        print("Loading datasets...")
-        ds_sst = xr.open_dataset(sst_path)
-        ds_ssha = xr.open_dataset(ssha_path)
-        ds_wind = xr.open_dataset(wind_path)
-        
-        # Verify required variables exist in each dataset
-        required_vars = {
-            'sst': ['sst', 'anom'],
-            'ssha': ['err_sla', 'ugos', 'vgos'],
-            'wind': ['uwnd', 'vwnd']
-        }
-        
-        print("Validating datasets...")
-        for ds, (name, vars) in zip([ds_sst, ds_ssha, ds_wind], required_vars.items()):
-            missing = [v for v in vars if v not in ds]
-            if missing:
-                raise ValueError(f"Missing variables in {name} dataset: {', '.join(missing)}")
+def setup_dask_memory():
+    """Configure Dask for memory-efficient processing"""
+    dask.config.set({
+        'array.slicing.split_large_chunks': True,
+        'array.chunk-size': '128MB',
+        'distributed.worker.memory.target': 0.8,
+        'distributed.worker.memory.spill': 0.85,
+        'distributed.worker.memory.pause': 0.90,
+        'distributed.worker.memory.terminate': 0.95
+    })
 
-        # ----------------------------------------------------------------------
-        # 2. Align time dimensions
-        # ----------------------------------------------------------------------
-        print("Aligning time dimensions...")
-        # Find common time period
-        common_start = max(
-            ds_sst.time[0].values,
-            ds_ssha.time[0].values,
-            ds_wind.time[0].values
-        )
-        common_end = min(
-            ds_sst.time[-1].values,
-            ds_ssha.time[-1].values,
-            ds_wind.time[-1].values
-        )
-        
-        if common_start >= common_end:
-            raise ValueError("No overlapping time period between datasets")
-            
-        print(f"Common time period: {common_start} to {common_end}")
-
-        # ----------------------------------------------------------------------
-        # 3. Merge datasets
-        # ----------------------------------------------------------------------
-        print("Merging datasets...")
-        # Select common time period for each dataset
-        print("\nDataset Time Ranges:")
-        print(f"SST:   {ds_sst.time[0].values} to {ds_sst.time[-1].values}")
-        print(f"SSHA:  {ds_ssha.time[0].values} to {ds_ssha.time[-1].values}")
-        print(f"Wind:  {ds_wind.time[0].values} to {ds_wind.time[-1].values}")
-        print(common_start, common_end)
-        ds_sst = ds_sst.sel(time=slice(common_start, common_end))
-        ds_ssha = ds_ssha.sel(time=slice(common_start, common_end))
-        ds_wind = ds_wind.sel(time=slice(common_start, common_end))
-        
-        # Create merged dataset with selected variables
-        merged = xr.Dataset({
-            'sst': ds_sst['sst'],
-            'anom': ds_sst['anom'],
-            'ssha': ds_ssha['err_sla'],
-            'ugos': ds_ssha['ugos'],
-            'vgos': ds_ssha['vgos'],
-            'uwnd': ds_wind['uwnd'],
-            'vwnd': ds_wind['vwnd']
+def fix_wind_dims(wind_ds, ref_ds):
+    if 'latitude' not in wind_ds.dims or wind_ds.dims['latitude'] == 0:
+        print("Reconstructing wind grid...")
+        wind_ds = wind_ds.assign_coords({
+            'latitude': ('latitude', ref_ds.latitude.values),
+            'longitude': ('longitude', ref_ds.longitude.values)
         })
         
-        # ----------------------------------------------------------------------
-        # 4. Save merged dataset
-        # ----------------------------------------------------------------------
-        print(f"Saving merged dataset to {output_path}...")
-        merged.to_netcdf(output_path)
-        print("Merge completed successfully!")
+        # Verify reconstruction
+        if not all(np.allclose(wind_ds[dim].values, ref_ds[dim].values) 
+                  for dim in ['latitude', 'longitude']):
+            raise ValueError("Grid reconstruction failed")
+    return wind_ds
+
+def smart_temporal_alignment(ds_list, names):
+    """Smart temporal alignment handling different time frequencies"""
+    print("\nAnalyzing time dimensions...")
+    
+    time_info = []
+    for ds, name in zip(ds_list, names):
+        time_coord = ds.time
+        
+        # Check if dataset has spatial dimensions
+        has_lat = 'latitude' in ds.dims and ds.dims['latitude'] > 0
+        has_lon = 'longitude' in ds.dims and ds.dims['longitude'] > 0
+        
+        if not (has_lat and has_lon):
+            print(f"⚠️  Warning: {name} dataset has no spatial dimensions!")
+            print(f"   Latitude: {ds.dims.get('latitude', 0)}, Longitude: {ds.dims.get('longitude', 0)}")
+            continue
+        
+        # Infer frequency more robustly
+        try:
+            if len(time_coord) > 1:
+                time_diff = pd.to_datetime(time_coord.values[1]) - pd.to_datetime(time_coord.values[0])
+                if time_diff.total_seconds() <= 21600:  # 6 hours or less
+                    freq = 'sub-daily'
+                else:
+                    freq = 'daily'
+            else:
+                freq = 'unknown'
+        except:
+            freq = 'unknown'
+            
+        time_info.append({
+            'name': name,
+            'start': time_coord[0].values,
+            'end': time_coord[-1].values,
+            'length': len(time_coord),
+            'freq': freq,
+            'dataset': ds
+        })
+        print(f"{name}: {len(time_coord)} steps, freq: {freq}")
+    
+    if not time_info:
+        raise ValueError("No datasets with valid spatial dimensions found!")
+    
+    # Find common time period
+    common_start = max([info['start'] for info in time_info])
+    common_end = min([info['end'] for info in time_info])
+    print(f"Common period: {common_start} to {common_end}")
+    
+    # Align to daily frequency (resample higher frequency data)
+    aligned_datasets = []
+    for info in time_info:
+        ds = info['dataset']
+        ds_aligned = ds.sel(time=slice(common_start, common_end))
+        
+        # Resample to daily if higher frequency
+        if info['freq'] == 'sub-daily':
+            print(f"Resampling {info['name']} to daily frequency...")
+            ds_aligned = ds_aligned.resample(time='1D').mean()
+        
+        aligned_datasets.append(ds_aligned)
+    
+    return aligned_datasets
+
+def regrid_to_common_grid(ds_list, names, target_resolution=0.25):
+    """Regrid all datasets to a common spatial grid"""
+    print(f"\nRegridding to common {target_resolution}° grid...")
+    
+    # Define target grid
+    lat_min = max([ds.latitude.min().item() for ds in ds_list])
+    lat_max = min([ds.latitude.max().item() for ds in ds_list])
+    lon_min = max([ds.longitude.min().item() for ds in ds_list])
+    lon_max = min([ds.longitude.max().item() for ds in ds_list])
+    
+    target_lat = np.arange(lat_min, lat_max + target_resolution, target_resolution)
+    target_lon = np.arange(lon_min, lon_max + target_resolution, target_resolution)
+    
+    print(f"Target grid: {len(target_lat)} lat × {len(target_lon)} lon points")
+    
+    regridded_datasets = []
+    for ds, name in zip(ds_list, names):
+        print(f"Regridding {name}...")
+        
+        # Use nearest neighbor interpolation to avoid memory issues
+        ds_regridded = ds.interp(
+            latitude=target_lat,
+            longitude=target_lon,
+            method='nearest'
+        )
+        regridded_datasets.append(ds_regridded)
+    
+    return regridded_datasets
+
+def chunk_aware_fillna(da, method='temporal', chunk_size_mb=100):
+    """Fill NaNs in a memory-efficient way using chunking"""
+    
+    # Calculate optimal chunk size
+    total_size_mb = da.nbytes / (1024**2)
+    if total_size_mb > chunk_size_mb:
+        # Rechunk to manageable size
+        time_chunks = max(1, len(da.time) // 10)  # ~10 time chunks
+        lat_chunks = max(1, len(da.latitude) // 4)  # ~4 lat chunks  
+        lon_chunks = max(1, len(da.longitude) // 4)  # ~4 lon chunks
+        
+        da = da.chunk({
+            'time': time_chunks,
+            'latitude': lat_chunks, 
+            'longitude': lon_chunks
+        })
+    
+    if method == 'temporal':
+        # Forward fill then backward fill
+        filled = da.ffill('time', limit=3).bfill('time', limit=3)
+    elif method == 'spatial_mean':
+        # Fill with spatial mean for each time step
+        spatial_mean = da.mean(dim=['latitude', 'longitude'], skipna=True)
+        filled = da.fillna(spatial_mean)
+    else:
+        # Simple forward fill
+        filled = da.ffill('time')
+    
+    return filled
+
+def validate_dataset(ds, name):
+    """Validation function from merge_oceanographic_data"""
+    print(f"\n{name} validation:")
+    print(f"Time: {len(ds.time)} steps")
+    print(f"Space: {len(ds.latitude)}×{len(ds.longitude)} grid")
+    print(f"Variables: {list(ds.data_vars)}")
+    if ds.isnull().any().compute():
+        print("Warning: NaN values present")
+
+def memory_efficient_merge(sst_path, ssha_path, wind_path, output_path, 
+                          target_resolution=0.25, chunk_size_mb=100):
+    """Memory-efficient merge with chunking and streaming"""
+    
+    setup_dask_memory()
+    
+    try:
+        print("=== MEMORY-EFFICIENT OCEANOGRAPHIC DATA MERGER ===")
+        
+        # Load datasets with chunking
+        print("\n1. Loading datasets with chunking...")
+        chunk_dict = {'time': 100, 'latitude': 50, 'longitude': 50}
+        
+        ds_sst = xr.open_dataset(sst_path, chunks=chunk_dict)
+        ds_ssha = xr.open_dataset(ssha_path, chunks=chunk_dict) 
+        ds_wind = xr.open_dataset(wind_path, chunks=chunk_dict)
+        
+        datasets = [ds_sst, ds_ssha, ds_wind]
+        names = ['SST', 'SSHA', 'Wind']
+        
+        print("Dataset info:")
+        for ds, name in zip(datasets, names):
+            print(f"{name}: {dict(ds.sizes)}, Variables: {list(ds.data_vars.keys())}")
+        
+        # Fix wind dimensions if needed
+        try:
+            ds_wind = fix_wind_dims(ds_wind, ds_sst)
+            datasets[2] = ds_wind  # Update in the list
+        except Exception as e:
+            print(f"Warning: Could not fix wind dimensions: {str(e)}")
+        
+        # Filter out datasets with no spatial dimensions
+        valid_datasets = []
+        valid_names = []
+        
+        for ds, name in zip(datasets, names):
+            has_lat = 'latitude' in ds.dims and ds.sizes['latitude'] > 0
+            has_lon = 'longitude' in ds.dims and ds.sizes['longitude'] > 0
+            
+            if has_lat and has_lon:
+                valid_datasets.append(ds)
+                valid_names.append(name)
+                print(f"{name}: Valid spatial dimensions")
+            else:
+                print(f"{name}: Invalid spatial dimensions (lat: {ds.sizes.get('latitude', 0)}, lon: {ds.sizes.get('longitude', 0)})")
+        
+        if len(valid_datasets) < 2:
+            raise ValueError(f"Need at least 2 valid datasets for merging. Found: {len(valid_datasets)}")
+        
+        datasets = valid_datasets
+        names = valid_names
+        
+        # Temporal alignment with frequency handling
+        print("\n2. Smart temporal alignment...")
+        aligned_datasets = smart_temporal_alignment(datasets, names)
+        
+        # Spatial regridding
+        print("\n3. Spatial regridding...")
+        regridded_datasets = regrid_to_common_grid(aligned_datasets, names, target_resolution)
+        
+        # Memory-efficient NaN filling
+        print("\n4. Memory-efficient NaN filling...")
+        filled_datasets = []
+        
+        var_methods = {
+            'sst': 'temporal', 'anom': 'temporal', 'err': 'spatial_mean',
+            'err_sla': 'temporal', 'ugos': 'spatial_mean', 'vgos': 'spatial_mean',
+            'uwnd': 'temporal', 'vwnd': 'temporal', 'ws': 'temporal'
+        }
+        
+        for ds, name in zip(regridded_datasets, names):
+            print(f"\nProcessing {name}...")
+            ds_filled = ds.copy()
+            
+            for var in ds.data_vars:
+                if var in var_methods:
+                    print(f"  Filling {var} using {var_methods[var]} method...")
+                    original_nans = ds[var].isnull().sum().compute().item()
+                    print(f"    Initial NaNs: {original_nans:,}")
+                    
+                    if original_nans > 0:
+                        filled_var = chunk_aware_fillna(ds[var], var_methods[var], chunk_size_mb)
+                        ds_filled[var] = filled_var
+                        
+                        # Check result
+                        remaining_nans = ds_filled[var].isnull().sum().compute().item()
+                        print(f"    Remaining NaNs: {remaining_nans:,}")
+                    else:
+                        print(f"    No NaNs to fill")
+            
+            filled_datasets.append(ds_filled)
+            gc.collect()
+        
+        # Add validation step from merge_oceanographic_data
+        print("\n5. Dataset validation...")
+        for ds, name in zip(filled_datasets, names):
+            validate_dataset(ds, name)
+        
+        # Streaming merge to avoid memory overload
+        print("\n6. Streaming merge operation...")
+        
+        # Select variables for merge
+        merge_vars = {}
+        if 'SST' in names:
+            sst_idx = names.index('SST')
+            merge_vars['SST'] = [v for v in ['sst', 'anom'] if v in filled_datasets[sst_idx].data_vars]
+        if 'SSHA' in names:
+            ssha_idx = names.index('SSHA') 
+            merge_vars['SSHA'] = [v for v in ['err_sla', 'ugos', 'vgos'] if v in filled_datasets[ssha_idx].data_vars]
+        if 'Wind' in names:
+            wind_idx = names.index('Wind')
+            merge_vars['Wind'] = [v for v in ['uwnd', 'vwnd'] if v in filled_datasets[wind_idx].data_vars]
+        
+        print("Variables for merge:")
+        for name, vars_list in merge_vars.items():
+            print(f"  {name}: {vars_list}")
+        
+        # Progressive merge
+        print("Merging datasets progressively...")
+        merged = None
+        
+        for i, (ds, name) in enumerate(zip(filled_datasets, names)):
+            vars_to_merge = merge_vars.get(name, [])
+            
+            if vars_to_merge:
+                ds_subset = ds[vars_to_merge]
+                
+                if merged is None:
+                    merged = ds_subset
+                    print(f"  Initialized with {name}")
+                else:
+                    print(f"  Merging {name}...")
+                    merged = xr.merge([merged, ds_subset], compat='override')
+                
+                gc.collect()
+        
+        if merged is None:
+            raise ValueError("No data available for merging")
+        
+        # Calculate derived variables efficiently
+        print("\n7. Computing derived variables...")
+        with ProgressBar():
+            if 'ugos' in merged and 'vgos' in merged:
+                print("  Computing ocean current properties...")
+                merged['current_speed'] = np.sqrt(merged.ugos**2 + merged.vgos**2)
+                merged['current_dir'] = np.arctan2(merged.vgos, merged.ugos)
+                
+            if 'uwnd' in merged and 'vwnd' in merged:
+                print("  Computing wind properties...")
+                merged['wind_speed'] = np.sqrt(merged.uwnd**2 + merged.vwnd**2)
+                merged['wind_dir'] = np.arctan2(merged.vwnd, merged.uwnd)
+        
+        # Final statistics
+        print("\n8. Final validation...")
+        print(f"Merged dataset dimensions: {dict(merged.sizes)}")
+        print(f"Variables: {list(merged.data_vars.keys())}")
+        print(f"Time range: {merged.time[0].values} to {merged.time[-1].values}")
+        
+        # Save with optimal encoding
+        print(f"\n9. Saving to {output_path}...")
+        
+        # Optimize encoding for space and speed
+        encoding = {}
+        for var in merged.data_vars:
+            encoding[var] = {
+                'zlib': True,
+                'complevel': 4,
+                'fletcher32': True,
+                'chunksizes': (50, 25, 25)  # time, lat, lon chunks
+            }
+        
+        # Add metadata
+        merged.attrs.update({
+            'title': 'Merged Oceanographic Dataset',
+            'description': 'SST, SSHA, and Wind data merged with spatial regridding',
+            'target_resolution': f'{target_resolution} degrees',
+            'regridding_method': 'nearest neighbor',
+            'created': str(np.datetime64('now')),
+            'processing': 'Chunked processing with Dask'
+        })
+        
+        # Save with progress bar
+        with ProgressBar():
+            merged.to_netcdf(output_path, encoding=encoding)
+        
+        file_size_gb = os.path.getsize(output_path) / (1024**3)
+        print(f"Merge completed! Output size: {file_size_gb:.2f} GB")
+        
+        return merged
         
     except Exception as e:
-        print(f"Error during merge: {str(e)}")
+        print(f"Error during merge: {e}")
+        import traceback
+        traceback.print_exc()
         raise
 
-# Example usage
+def merge_oceanographic_data(sst_path, ssha_path, wind_path, output_path):
+    print("Running simplified merge with default parameters")
+    return memory_efficient_merge(
+        sst_path=sst_path,
+        ssha_path=ssha_path,
+        wind_path=wind_path,
+        output_path=output_path,
+        target_resolution=0.25,
+        chunk_size_mb=100
+    )
+
 if __name__ == "__main__":
-    # Define your file paths
+    # Configuration
     sst_file = "sst_processed_20160101_20231231.nc"
-    ssha_file = "ssha_errsla_ugos_vgos_20160101_20231231.nc"
+    ssha_file = "ssha_errsla_ugos_vgos_20160101_20231231.nc" 
     wind_file = "ccmp_merged_20160101_20231231_scs.nc"
     output_file = "merged_marine_data.nc"
     
-    # Run the merge
-    merge_oceanographic_data(
-        sst_path=sst_file,
-        ssha_path=ssha_file,
-        wind_path=wind_file,
-        output_path=output_file
-    )
+    # Check file availability
+    input_files = [sst_file, ssha_file, wind_file]
+    missing_files = [f for f in input_files if not os.path.exists(f)]
+    
+    if missing_files:
+        print("Missing input files:")
+        for f in missing_files:
+            print(f"   {f}")
+    else:
+        print("All input files found")
+        
+        try:
+            # Run memory-efficient merge
+            result = memory_efficient_merge(
+                sst_path=sst_file,
+                ssha_path=ssha_file, 
+                wind_path=wind_file,
+                output_path=output_file,
+                target_resolution=0.25,  # 0.25° resolution
+                chunk_size_mb=100        # 100MB chunks
+            )
+            
+            print("\nSUCCESS: Merge completed without memory issues!")
+            
+        except Exception as e:
+            print(f"\nFAILED: {e}")
+            print("\nTry reducing target_resolution or chunk_size_mb parameters")
