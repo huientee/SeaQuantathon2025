@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jul 23 01:08:38 2025
-
-@author: teehuien
-"""
-
 import xarray as xr
 import numpy as np
 import pandas as pd
@@ -62,8 +54,8 @@ if 'anom' in ds_merged.variables:
 ds_merged = ds_merged.rename({'ssta': 'anom'})
 
 # === Step 6: Subset final date range and save ===
-subset = ds_merged.sel(time=slice('2016-01-01', '2024-11-19'))
-output_file = "sst_processed_20160101_20241119.nc"
+subset = ds_merged.sel(time=slice('2016-01-01', '2023-12-31'))
+output_file = "sst_processed_20160101_20231231.nc"
 subset.to_netcdf(output_file)
 
-print(f"Saved dataset with corrected anomalies from 2016-01-01 to 2024-11-19 to: {output_file}")
+print(f"Saved dataset with corrected anomalies from 2016-01-01 to 2023-12-31 to: {output_file}")
