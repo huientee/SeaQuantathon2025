@@ -11,7 +11,6 @@ This folder contains scripts for downloading and preprocessing key oceanographic
   Source: Copernicus Marine – DUACS Global L4
 
 - **Surface Wind (SSW)**  
-  Variables: 10m U-wind and V-wind components  
   Source: RSS CCMP Wind Analysis v3.1
 
 ## Spatial Domain
