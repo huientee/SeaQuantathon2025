@@ -1,0 +1,99 @@
+import xarray as xr
+import numpy as np
+import os
+
+def merge_oceanographic_data(sst_path, ssha_path, wind_path, output_path):
+    try:
+        # ----------------------------------------------------------------------
+        # 1. Load and validate individual datasets
+        # ----------------------------------------------------------------------
+        print("Loading datasets...")
+        ds_sst = xr.open_dataset(sst_path)
+        ds_ssha = xr.open_dataset(ssha_path)
+        ds_wind = xr.open_dataset(wind_path)
+        
+        # Verify required variables exist in each dataset
+        required_vars = {
+            'sst': ['sst', 'anom'],
+            'ssha': ['err_sla', 'ugos', 'vgos'],
+            'wind': ['uwnd', 'vwnd']
+        }
+        
+        print("Validating datasets...")
+        for ds, (name, vars) in zip([ds_sst, ds_ssha, ds_wind], required_vars.items()):
+            missing = [v for v in vars if v not in ds]
+            if missing:
+                raise ValueError(f"Missing variables in {name} dataset: {', '.join(missing)}")
+
+        # ----------------------------------------------------------------------
+        # 2. Align time dimensions
+        # ----------------------------------------------------------------------
+        print("Aligning time dimensions...")
+        # Find common time period
+        common_start = max(
+            ds_sst.time[0].values,
+            ds_ssha.time[0].values,
+            ds_wind.time[0].values
+        )
+        common_end = min(
+            ds_sst.time[-1].values,
+            ds_ssha.time[-1].values,
+            ds_wind.time[-1].values
+        )
+        
+        if common_start >= common_end:
+            raise ValueError("No overlapping time period between datasets")
+            
+        print(f"Common time period: {common_start} to {common_end}")
+
+        # ----------------------------------------------------------------------
+        # 3. Merge datasets
+        # ----------------------------------------------------------------------
+        print("Merging datasets...")
+        # Select common time period for each dataset
+        print("\nDataset Time Ranges:")
+        print(f"SST:   {ds_sst.time[0].values} to {ds_sst.time[-1].values}")
+        print(f"SSHA:  {ds_ssha.time[0].values} to {ds_ssha.time[-1].values}")
+        print(f"Wind:  {ds_wind.time[0].values} to {ds_wind.time[-1].values}")
+        print(common_start, common_end)
+        ds_sst = ds_sst.sel(time=slice(common_start, common_end))
+        ds_ssha = ds_ssha.sel(time=slice(common_start, common_end))
+        ds_wind = ds_wind.sel(time=slice(common_start, common_end))
+        
+        # Create merged dataset with selected variables
+        merged = xr.Dataset({
+            'sst': ds_sst['sst'],
+            'anom': ds_sst['anom'],
+            'ssha': ds_ssha['err_sla'],
+            'ugos': ds_ssha['ugos'],
+            'vgos': ds_ssha['vgos'],
+            'uwnd': ds_wind['uwnd'],
+            'vwnd': ds_wind['vwnd']
+        })
+        
+        # ----------------------------------------------------------------------
+        # 4. Save merged dataset
+        # ----------------------------------------------------------------------
+        print(f"Saving merged dataset to {output_path}...")
+        merged.to_netcdf(output_path)
+        print("Merge completed successfully!")
+        
+    except Exception as e:
+        print(f"Error during merge: {str(e)}")
+        raise
+
+# Example usage
+if __name__ == "__main__":
+    # Define your file paths
+    sst_file = "sst_processed_20160101_20231231.nc"
+    ssha_file = "ssha_errsla_ugos_vgos_20160101_20231231.nc"
+    wind_file = "ccmp_merged_20160101_20231231_scs.nc"
+    output_file = "merged_marine_data.nc"
+    
+    # Run the merge
+    merge_oceanographic_data(
+        sst_path=sst_file,
+        ssha_path=ssha_file,
+        wind_path=wind_file,
+        output_path=output_file
+    )
