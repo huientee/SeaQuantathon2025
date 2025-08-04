@@ -8,7 +8,7 @@ This solution leverages Quantum Reservoir Computing to forecast sea surface temp
 
 🎯 Objective
 
-- To design and implement a robust quantum-enhanced forecasting system that:
+To design and implement a robust quantum-enhanced forecasting system that:
 
 - Accurately predicts marine heatwave events 
 
