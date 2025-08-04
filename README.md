@@ -25,7 +25,7 @@ Disruption of fisheries and aquaculture
 
 Economic threats to tourism and coastal livelihoods
 
-Amplified tropical cyclone activity and extreme weather
+Amplified typhoon activity and extreme weather
 
 By integrating quantum computing into marine heatwave forecasting, this project aims to pave the way for next-generation climate resilience tools in Southeast Asia and beyond.
 
