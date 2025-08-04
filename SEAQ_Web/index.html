@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Quantum Sea Surface Temperature Forecast</title>
+  <meta content="" name="description">
+  <meta content="" name="keywords">
+
+    <!-- Favicons -->
+  <link href="images_vid/Logo1.jpg" rel="icon">
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Raleway:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+  
+  <!-- Vendor CSS Files -->
+  <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/vendor/aos/aos.css" rel="stylesheet">
+  <link href="assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
+  <link href="assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
+
+  <!-- Main CSS File -->
+  <link href="assets/css/main.css" rel="stylesheet">
+
+</head>
+
+<body class="index-page">
+
+  <header id="header" class="header d-flex flex-column justify-content-center">
+
+    <i class="header-toggle d-xl-none bi bi-list"></i>
+
+    <nav id="navmenu" class="navmenu">
+      <ul>
+        <li><a href="#home" class="active"><i class="bi bi-house navicon"></i><span>Home</span></a></li>
+        <li><a href="#forecast"><i class="bi bi-cloud-sun navicon"></i><span>Forecast</span></a></li>
+        <li><a href="#dataset"><i class="bi bi-file-earmark-text navicon"></i><span>Dataset</span></a></li>
+        <li><a href="#about"><i class="bi bi-info-circle navicon"></i><span>About</span></a></li>
+      </ul>
+    </nav>
+
+  </header> 
+  
+  <main class="main">
+
+<!-- Home Section -->
+<section id="home" class="hero section light-background position-relative overflow-hidden">
+
+  <!-- Background Video -->
+  <video autoplay muted loop playsinline class="position-absolute top-0 start-0 w-100 h-100" style="object-fit: cover; z-index: 0;">
+    <source src="images_vid/Waves.mp4" type="video/mp4">
+  </video>
+
+<!-- Foreground Content -->
+<div class="container-fluid position-relative text-white" style="z-index: 2; height: 100vh;">
+
+  <!--Logo, Brand, Tagline, World Map-->
+  <div class="row pt-3 px-2">
+    <!-- Logo + Brand -->
+    <div class="col-auto d-flex flex-column align-items-start">
+      <img src="images_vid/Logo1-removebg.png" alt="logo" class="img-fluid" style="max-height: 60px;">
+      <h1 class="h6 fw-bold text-white" style="margin-top: -8px;">Quantum Seas</h1>
+    </div>
+
+<!-- Tagline Centered with Map -->
+<div class="row justify-content-center" style="margin-top: -65px;">
+  <div class="col-md-9 text-center">
+    <h2 class="h3 fw-bold mb-4">A Quantum-Powered Early Warning System for Marine Heatwaves</h2>
+  </div>
+</div>
+
+<!-- Centered World Map -->
+<div class="row justify-content-center">
+  <div class="col-md-10 text-center">
+    <img src="images_vid/map1.png" alt="World Map" class="img-fluid" style="max-width: 95%;">
+  </div>
+</div>
+
+</section>   
+
+<!-- Forecast Section -->
+<section id="forecast" class="forecast section">
+  <!-- Section Title -->
+  <div class="container section-title" data-aos="fade-up">
+    <h2>Forecast</h2>
+    <p>Using Quantum Reservoir Computing for Marine Heatwave Forecasting</p>
+  </div>
+
+  <!-- ✅ Anomaly Alert Bar -->
+  <div id="anomaly-alert" class="alert alert-danger text-center fw-bold col-md-11 offset-md-0"
+       role="alert" style="display: none; padding: 15px 10px; margin-bottom: 15px; font-size: 1rem;">
+  </div>
+
+  <div class="container-fluid">
+    <!-- Stats header -->
+    <div class="row text-white text-center fw-bold">
+      <div class="col-md-3 bg-blue p-1" style="background-color:#a3cef1"> %<br>Total cover<br>18.38 </div>
+      <div class="col-md-2 bg-warning p-1"> %<br>I Moderate<br>14.56 </div>
+      <div class="col-md-2 bg-orange p-1" style="background-color:#ff6600;"> %<br>II Strong<br>3.31 </div>
+      <div class="col-md-2 bg-red p-1" style="background-color:#a50101;"> %<br>III Severe<br>0.37 </div>
+      <div class="col-md-2 bg-red p-1" style="background-color:#5c0101;"> %<br>IV Extreme<br>0.14 </div>
+    </div>
+
+    <!-- Main layout -->
+    <div class="row mt-0">
+      <!-- Sidebar controls -->
+      <div class="col-md-3 bg-light p-3">
+        <h5>Controls</h5>
+        <div class="mb-3">
+          <label>📊 Baseline</label>
+          <input type="number" class="form-control" placeholder="2023" />
+        </div>
+        <div class="mb-3">
+          <label>🗓Start Date</label>
+          <input type="date" class="form-control" id="start-date" value="2023-11-01" />
+        </div>
+        <div class="mb-3">
+          <label>🗓End Date</label>
+          <input type="date" class="form-control" id="end-date" value="2023-12-01" />
+        </div>
+        <div class="mb-3">
+          <label>🗺️ Map layer</label>
+          <select class="form-select">
+            <option>SST Baseline</option>
+            <option>SST Anomaly</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label>⬇ Download</label>
+          <input type="text" class="form-control mb-1" value="2023-11-01 - 2023-12-01" />
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="format" checked />
+            <label class="form-check-label">.csv</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="format" />
+            <label class="form-check-label">.nc</label>
+          </div>
+          <button class="btn btn-primary btn-sm mt-2 w-100">⬇ Download</button>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div class="col-md-8 p-0">
+        <div id="map" style="height: 500px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS and Heat -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <!-- Map Script -->
+  <script>
+    const map = L.map("map").setView([15, 113], 5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://carto.com/">CartoDB</a>'
+    }).addTo(map);
+
+    function generateHeatPoints(basePoints) {
+      const extraPoints = Array.from({ length: 30 }, () => [
+        5 + Math.random() * 13,
+        110 + Math.random() * 6,
+        Math.random()
+      ]);
+      return basePoints.concat(extraPoints);
+    }
+
+    const heatLayers = {
+      "SST Baseline": generateHeatPoints([
+        [20.375, 111.625, 0.8],
+        [17.5, 110.3, 0.5],
+        [13.5, 118.0, 0.3],
+        [19.0, 115.0, 0.7],
+        [19.0, 115.0, 0.7],
+        [16.5, 113.2, 0.6]
+      ]),
+      "SST Anomaly": generateHeatPoints([
+        [20.375, 111.625, 0.8],
+        [17.5, 110.3, 0.5],
+        [13.5, 118.0, 0.3],
+        [19.0, 115.0, 0.7],
+        [19.0, 115.0, 0.7],
+        [16.5, 113.2, 0.6]
+      ]),
+      "MHW Probability": generateHeatPoints([
+        [20.375, 111.625, 0.8],
+        [17.5, 110.3, 0.5],
+        [13.5, 118.0, 0.3],
+        [19.0, 115.0, 0.7],
+        [19.0, 115.0, 0.7],
+        [16.5, 113.2, 0.6]
+      ])
+    };
+
+    let currentLayer = null;
+
+    function updateHeatmap(layerName) {
+      if (currentLayer) {
+        map.removeLayer(currentLayer);
+      }
+
+      currentLayer = L.heatLayer(heatLayers[layerName], {
+        radius: 25,
+        blur: 15,
+        maxZoom: 6,
+        gradient: {
+          0.0: "#ffffb2",
+          0.3: "#fd8d3c",
+          0.6: "#f03b20",
+          1.0: "#bd0026"
+        }
+      }).addTo(map);
+    }
+
+    updateHeatmap("SST Baseline");
+
+    document.querySelector("select.form-select").addEventListener("change", function (e) {
+      updateHeatmap(e.target.value);
+    });
+
+    map.on("click", function (e) {
+      const lat = e.latlng.lat.toFixed(3);
+      const lng = e.latlng.lng.toFixed(3);
+      L.popup()
+        .setLatLng(e.latlng)
+        .setContent(`<b>Lon = ${lng}°E<br>Lat = ${lat}°N</b><br><span style='font-weight:bold;'>↓ See time series below ↓</span>`)
+        .openOn(map);
+    });
+
+    // ✅ Anomaly Warning System
+    function checkAnomalyAlert() {
+      const start = new Date(document.getElementById('start-date').value);
+      const end = new Date(document.getElementById('end-date').value);
+      const isAnomalyPeriod = (start.getMonth() <= 1 || end.getMonth() <= 1 || start.getMonth() === 10 || start.getMonth() === 11);
+      const alertBar = document.getElementById('anomaly-alert');
+
+      if (isAnomalyPeriod) {
+        const day = String(start.getDate()).padStart(2, '0');
+        const month = String(start.getMonth() + 1).padStart(2, '0');
+        const year = start.getFullYear();
+        alertBar.innerHTML = `⚠️ Marine Heatwave Anomaly Detected on <strong>${day}/${month}/${year}</strong> at 3pm.`;
+        alertBar.style.display = 'block';
+      } else {
+        alertBar.style.display = 'none';
+      }
+    }
+
+    document.getElementById('start-date').addEventListener('change', checkAnomalyAlert);
+    document.getElementById('end-date').addEventListener('change', checkAnomalyAlert);
+    checkAnomalyAlert();
+  </script>
+</section><!-- /Forecast Section -->
+
+
+<!-- Dataset Section -->
+<section id="dataset" class="dataset section">
+
+  <!-- Section Title -->
+  <div class="container section-title" data-aos="fade-up">
+    <h2>Dataset</h2>
+    <p>Datasets available for download. View results from SST analysis.</p>
+  </div><!-- End Section Title -->
+
+  <div class="container-fluid" data-aos="fade-up" data-aos-delay="100">
+    <div class="row">
+      <!-- Sidebar Controls -->
+      <div class="col-md-3 bg-dark text-white p-3">
+        <h5>Controls</h5>
+        <div class="mb-3">
+          <label>Start Date</label>
+          <input type="date" class="form-control" id="start-date" value="2023-11-01">
+          <label>End Date</label>
+          <input type="date" class="form-control mt-2" id="end-date" value="2023-12-01">
+        </div>
+        <div class="mb-3">
+          <label>Download</label>
+          <select class="form-select">
+            <option>.csv</option>
+            <option>.nc</option>
+          </select>
+          <button class="btn btn-primary mt-2 w-100">⬇ Download</button>
+        </div>
+      </div>
+
+      <!-- Main Plot Area -->
+      <div class="col-md-8 bg-white">
+
+        <!-- Location Header -->
+        <div class="px-3 py-2 border-bottom">
+          <h5>Lon = 115.162°E    Lat = 18.746°N</h5>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs px-3 pt-2" id="dataTabs">
+          <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#timeseries">Time series</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#table">Table</a>
+          </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content p-3">
+          <!-- Time Series Tab -->
+          <div id="timeseries" class="tab-pane fade show active">
+            <div id="plot" style="height: 500px;"></div>
+          </div>
+
+          <!-- Table Tab -->
+          <div id="table" class="tab-pane fade">
+            <div class="table-responsive mt-3">
+              <table id="mhw-table" class="display nowrap" style="width:100%">
+                <thead>
+                  <tr>
+                    <th>Event</th><th>Lon</th><th>Lat</th><th>#</th><th>Category</th><th>Duration</th><th>Start Date</th><th>Peak Date</th><th>End Date</th><th>Mean Intensity</th><th>Max. Intensity</th><th>Cum. Intensity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>MHW</td><td>111.625</td><td>20.625</td><td>145</td><td>II Strong</td><td>19</td><td>2023-11-25</td><td>2023-08-02</td><td>2023-08-12</td><td>1.585</td><td>2.25</td><td>30.12</td></tr>
+                  <tr><td>MHW</td><td>111.625</td><td>20.625</td><td>146</td><td>I Moderate</td><td>9</td><td>2023-11-17</td><td>2023-08-20</td><td>2023-08-25</td><td>1.17</td><td>1.33</td><td>10.53</td></tr>
+                  <tr><td>MHW</td><td>111.625</td><td>20.625</td><td>147</td><td>II Strong</td><td>12</td><td>2023-11-30</td><td>2023-10-06</td><td>2023-10-11</td><td>1.479</td><td>1.94</td><td>17.75</td></tr>
+                  <tr><td>MHW</td><td>111.625</td><td>20.625</td><td>148</td><td>II Strong</td><td>82</td><td>2023-11-03</td><td>2023-01-23</td><td>2023-01-23</td><td>1.892</td><td>2.8</td><td>155.1</td></tr>
+                  <tr><td>MHW</td><td>111.625</td><td>20.625</td><td>149</td><td>I Moderate</td><td>6</td><td>2023-11-26</td><td>2023-03-31</td><td>2023-03-31</td><td>2.025</td><td>2.23</td><td>12.15</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div> <!-- end tab-content -->
+      </div> <!-- end col-md-9 -->
+    </div> <!-- end row -->
+  </div> <!-- end container-fluid -->
+
+  <!-- Plotly + DataTables Scripts -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+
+  <script>
+const n = 365;
+const dates = [...Array(n).keys()].map(i => new Date(2023, 10, 1 + i));
+const seasonal = dates.map((d, i) => 20 + 3 * Math.sin(i * 2 * Math.PI / 365));
+const threshold = seasonal.map(s => s + 2);
+const sst = seasonal.map((s, i) => s + (Math.random() * 4 - 1));
+
+// MHW: highlight SST only when it exceeds threshold
+const mhw = sst.map((t, i) => t > threshold[i] ? t : null);
+
+    Plotly.newPlot('plot', [
+      { x: dates, y: sst, type: 'scatter', name: 'SST', line: { color: 'black' } },
+      { x: dates, y: seasonal, type: 'scatter', name: 'Climatology', line: { color: 'blue' } },
+      { x: dates, y: threshold, type: 'scatter', name: 'Threshold', line: { color: 'green' } },
+      { x: dates, y: mhw, type: 'scatter', name: 'MHW', fill: 'tonexty', mode: 'none', fillcolor: 'rgba(255,0,0,0.4)' }
+    ], {
+      yaxis: { title: 'SST [°C]' },
+      xaxis: { title: 'Date' },
+      margin: { t: 50 }
+    });
+
+    $(document).ready(function () {
+      $('#mhw-table').DataTable({ scrollX: true, paging: true });
+    });
+  </script>
+</section> <!-- /Dataset Section -->
+
+
+<!-- About Section -->
+    <section id="about" class="about section">
+
+      <!-- Section Title -->
+      <div class="container section-title" data-aos="fade-up">
+        <h2>About</h2>
+      </div><!-- End Section Title -->
+
+      <div class="container">
+
+        <div class="row">
+
+          <div class="col-lg-6" data-aos="fade-up" data-aos-delay="100">
+            <h3 class="about-title">Who are we?</h3>
+
+            <div class="about-item pb-0">
+              <p><em>We are Quantum Climate Rangers, a dedicated team passionate about environmental science and quantum machine learning, striving to provide accurate and insightful ocean heat map predictions.
+              </em></p>
+            </div><!-- Edn Resume Item -->
+
+            <h3 class="about-title">Project</h3>
+            <div class="about-item">
+              <p><em>This project aims to leverage quantum machine learning models to forecast ocean heat distribution, aiding in climate research and marine conservation efforts.</em></p>
+            </div><!-- Edn Resume Item -->
+          </div>
+
+          <div class="col-lg-6" data-aos="fade-up" data-aos-delay="100">
+            <h3 class="about-title">Visions</h3>
+            <div class="about-item">
+              <p><em>To develop a robust and highly accurate quantum machine learning framework that provides significantly extended accuracy and lead-time forecasts of marine heatwaves in the South China Sea, thereby enabling proactive mitigation strategies to protect marine ecosystems, support coastal communities, and inform regional policy decisions in the face of escalating climate change impacts.
+              </em></p>
+            </div><!-- Edn Resume Item -->
+          </div>
+        </div>
+      </div>
+
+</section><!-- /About Section -->
+
+  </main>
+
+  <footer id="footer" class="footer position-relative light-background">
+    <div class="container">
+      <h5 class="sitename">Quantum Seas</h5>
+      <p>This application was developed as part of the SEA Quantathon 2025, an event focused on innovative solutions using quantitative methods and quantum computing.</p>
+      <div class="container">
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scroll Top -->
+  <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
+
+  <!-- Preloader -->
+  <div id="preloader"></div>
+
+  <!-- Vendor JS Files -->
+  <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/vendor/aos/aos.js"></script>
+  <script src="assets/vendor/typed.js/typed.umd.js"></script>
+  <script src="assets/vendor/purecounter/purecounter_vanilla.js"></script>
+  <script src="assets/vendor/waypoints/noframework.waypoints.js"></script>
+  <script src="assets/vendor/glightbox/js/glightbox.min.js"></script>
+  <script src="assets/vendor/imagesloaded/imagesloaded.pkgd.min.js"></script>
+  <script src="assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
+  <script src="assets/vendor/swiper/swiper-bundle.min.js"></script>
+
+  <!-- Main JS File -->
+  <script src="assets/js/main.js"></script>
+
+</body>
+
+</html>
+  
